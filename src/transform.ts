@@ -270,6 +270,15 @@ function getFrontMatter(page: NotionPage): string {
   frontmatter += `sidebar_position: ${page.order}\n`;
   frontmatter += `slug: ${page.slug ?? ""}\n`;
   if (page.keywords) frontmatter += `keywords: [${page.keywords}]\n`;
+  if (page.frontmatter) {
+    const notionFrontmatter = page.frontmatter;
+
+    const notionFromtmatterProperties = notionFrontmatter.split("\n");
+
+    notionFromtmatterProperties.forEach(property => {
+      frontmatter += `${property}\n`;
+    });
+  }
 
   frontmatter += "---\n";
   return frontmatter;

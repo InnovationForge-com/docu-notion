@@ -133,6 +133,9 @@ export class NotionPage {
   public get keywords(): string | undefined {
     return this.getPlainTextProperty("Keywords", "");
   }
+  public get frontmatter(): string | undefined {
+    return this.getPlainTextProperty("Frontmatter", "");
+  }
   public get status(): string | undefined {
     return this.getSelectProperty("Status");
   }
