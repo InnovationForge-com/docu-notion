@@ -56,6 +56,19 @@ export async function run(): Promise<void> {
     .option(
       "-p, --img-prefix-in-markdown <string>",
       "When referencing an image from markdown, prefix with this path instead of the full img-output-path. Should be used only in conjunction with --img-output-path."
+    )
+    .option(
+      "--require-slugs",
+      "If set, docu-notion will fail if any pages it would otherwise publish are missing a slug in Notion.",
+      false
+    )
+    .addOption(
+      new Option(
+        "--image-file-name-format <format>",
+        "format:\n- default: {page slug (if any)}.{image block ID}\n- content-hash: Use a hash of the image content.\n- legacy: Use the legacy (before v0.16) method of determining file names. Set this to maintain backward compatibility.\nAll formats will use the original file extension."
+      )
+        .choices(["default", "content-hash", "legacy"])
+        .default("default")
     );
 
   program.showHelpAfterError();
