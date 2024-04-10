@@ -1,5 +1,5 @@
 {
-  "version": "0.2.2",
+  "version": "0.3.0",
   "scripts": {
     "test": "vitest",
     "build": "npm run test -- --run && tsc && cp ./src/css/*.css dist/",
