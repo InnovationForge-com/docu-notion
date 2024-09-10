@@ -3,6 +3,7 @@
 import { GetPageResponse } from "@notionhq/client/build/src/api-endpoints";
 import { parseLinkId } from "./plugins/internalLinks";
 import { ListBlockChildrenResponseResults } from "notion-to-md/build/types";
+import { info } from "./log";
 
 // Notion has 2 kinds of pages: a normal one which is just content, and what I'm calling a "database page", which has whatever properties you put on it.
 // docu-notion supports the later via links from outline pages. That is, you put the database pages in a database, then separately, in the outline, you
@@ -79,8 +80,8 @@ export class NotionPage {
     return this.type === PageType.Simple
       ? this.title
       : // if it's a Database page, then we'll use the slug unless there is none, then we'd rather have the
-        // page name than an ugly id for the file name
-        this.explicitSlug()?.replace(/^\//, "") || this.name;
+      // page name than an ugly id for the file name
+      this.explicitSlug()?.replace(/^\//, "") || this.name;
   }
 
   // TODO: let's go farther in hiding this separate title vs name stuff. This seems like an implementation detail on the Notion side.
@@ -131,8 +132,29 @@ export class NotionPage {
     return this.explicitSlug() !== undefined;
   }
   public get keywords(): string | undefined {
-    return this.getPlainTextProperty("Keywords", "");
+    return this.getMultiSelectProperty("Keywords");
   }
+
+  public get authors(): string | undefined {
+    return this.getMultiSelectProperty("Authors");
+  }
+
+  public get lastauthor(): string | undefined {
+    return this.getSelectProperty("Last author");
+  }
+
+  public get image(): string | undefined {
+    return this.getPlainTextProperty("Image", "");
+  }
+
+  public get description(): string | undefined {
+    return this.getPlainTextProperty("Description", "");
+  }
+
+  public get tags(): string | undefined {
+    return this.getMultiSelectProperty("Tags");
+  }
+
   public get frontmatter(): string | undefined {
     return this.getPlainTextProperty("Frontmatter", "");
   }
@@ -179,8 +201,8 @@ export class NotionPage {
     //console.log("textarray:" + JSON.stringify(textArray, null, 2));
     return textArray && textArray.length
       ? (textArray
-          .map((item: { plain_text: any }) => item.plain_text)
-          .join("") as string)
+        .map((item: { plain_text: any }) => item.plain_text)
+        .join("") as string)
       : defaultIfEmpty;
   }
 
@@ -209,6 +231,31 @@ export class NotionPage {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return p.select?.name || undefined;
   }
+
+  public getMultiSelectProperty(property: string): string | undefined {
+    const p = (this.metadata as any).properties?.[property];
+    if (!p) {
+      throw new Error(
+        `missing ${property} in ${JSON.stringify(this.metadata, null, 2)}`
+      );
+      return undefined;
+    }
+
+    const multiSelectItems = p.multi_select;
+    if (!multiSelectItems || !Array.isArray(multiSelectItems)) {
+      return undefined;
+    }
+
+    // Convert each item in the multi_select array to a string representation
+    const multiSelectString = multiSelectItems.map((item: any) => {
+      return `${item.name}`;
+    }).join(",");
+
+    return multiSelectString;
+  }
+
+
+
 
   public getDateProperty(
     property: string,

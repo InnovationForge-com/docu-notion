@@ -7,4 +7,8 @@ version.json
 docs/
 *.orig
 
+# Docusaurus pages from Notion when testing
+/docs
+/blog
+
 css/docu-notion-styles.css

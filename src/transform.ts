@@ -15,14 +15,13 @@ export async function getMarkdownForPage(
   page: NotionPage
 ): Promise<string> {
   info(
-    `Reading & converting page ${page.layoutContext}/${
-      page.nameOrTitle
+    `Reading & converting page ${page.layoutContext}/${page.nameOrTitle
     } (${chalk.blue(
       page.hasExplicitSlug
         ? page.slug
         : page.foundDirectlyInOutline
-        ? "Descendant of Outline, not Database"
-        : "NO SLUG"
+          ? "Descendant of Outline, not Database"
+          : "NO SLUG"
     )})`
   );
 
@@ -31,7 +30,7 @@ export async function getMarkdownForPage(
   logDebugFn("markdown from page", () => JSON.stringify(blocks, null, 2));
 
   const body = await getMarkdownFromNotionBlocks(context, config, blocks);
-  const frontmatter = getFrontMatter(page); // todo should be a plugin
+  const frontmatter = await getFrontMatter(page, context); // todo should be a plugin
   return `${frontmatter}\n${body}`;
 }
 
@@ -264,21 +263,56 @@ function registerNotionToMarkdownCustomTransforms(
 }
 
 // enhance:make this built-in plugin so that it can be overridden
-function getFrontMatter(page: NotionPage): string {
+async function getFrontMatter(
+  page: NotionPage,
+  context: IDocuNotionContext
+): Promise<string> {
   let frontmatter = "---\n";
   frontmatter += `title: ${page.nameOrTitle.replaceAll(":", "-")}\n`; // I have not found a way to escape colons
+  frontmatter += `description: "${page.description}"\n`;
   frontmatter += `sidebar_position: ${page.order}\n`;
   frontmatter += `slug: ${page.slug ?? ""}\n`;
-  if (page.keywords) frontmatter += `keywords: [${page.keywords}]\n`;
-  if (page.frontmatter) {
-    const notionFrontmatter = page.frontmatter;
-
-    const notionFromtmatterProperties = notionFrontmatter.split("\n");
-
-    notionFromtmatterProperties.forEach(property => {
-      frontmatter += `${property}\n`;
-    });
+  if (page.authors !== "") {
+    frontmatter += `authors: [${page.authors}]\n`;
   }
+  // Assuming `last_edited_time` is a string in ISO format
+  const createdTime = (page.metadata as any).created_time as string;
+  // Convert to Date object
+  const dateCreatedTime = new Date(createdTime);
+  // Format the date to YYYY-MM-DD
+  const formattedDateCreatedTime = dateCreatedTime.toISOString().slice(0, 10);
+  frontmatter += `date: ${formattedDateCreatedTime}\n`;
+
+  // if (page.tags !== "") {
+  //   frontmatter += `tags: [${page.tags}]\n`;
+  // }
+  if (page.keywords) frontmatter += `keywords: [${page.keywords}]\n`;
+  if (page.keywords) frontmatter += `tags: [${page.keywords}]\n`;
+
+  // Assuming `last_edited_time` is a string in ISO format
+  const lastEditedTime = (page.metadata as any).last_edited_time as string;
+  // Convert to Date object
+  const date = new Date(lastEditedTime);
+  // Format the date to YYYY-MM-DD
+  const formattedDate = date.toISOString().slice(0, 10);
+
+  // Set last author
+  if (page.lastauthor) {
+    frontmatter += `last_update: \n date: ${formattedDate}\n author: ${page.lastauthor}\n`
+  }
+
+  // Set image
+  if (page.image) {
+    frontmatter += `image: ${page.image}\n`
+  }
+
+  // if (page.frontmatter) {
+  //   const notionFrontmatter = page.frontmatter;
+  //   const notionFromtmatterProperties = notionFrontmatter.split("\n");
+  //   notionFromtmatterProperties.forEach(property => {
+  //     frontmatter += `${property}\n`;
+  //   });
+  // }
 
   frontmatter += "---\n";
   return frontmatter;
