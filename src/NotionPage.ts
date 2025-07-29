@@ -162,6 +162,10 @@ export class NotionPage {
     return this.getSelectProperty("Status");
   }
 
+  public get lastEditedTime(): string {
+    return (this.metadata as any).last_edited_time;
+  }
+
   public getPlainTextProperty(
     property: string,
     defaultIfEmpty: string
@@ -235,23 +239,22 @@ export class NotionPage {
   public getMultiSelectProperty(property: string): string | undefined {
     const p = (this.metadata as any).properties?.[property];
     if (!p) {
-      throw new Error(
-        `missing ${property} in ${JSON.stringify(this.metadata, null, 2)}`
-      );
+      // Return undefined instead of throwing - consistent with other optional properties
       return undefined;
     }
 
     const multiSelectItems = p.multi_select;
-    if (!multiSelectItems || !Array.isArray(multiSelectItems)) {
+    if (!multiSelectItems || !Array.isArray(multiSelectItems) || multiSelectItems.length === 0) {
       return undefined;
     }
 
     // Convert each item in the multi_select array to a string representation
-    const multiSelectString = multiSelectItems.map((item: any) => {
-      return `${item.name}`;
-    }).join(",");
+    const multiSelectString = multiSelectItems
+      .filter((item: any) => item && item.name) // Filter out invalid items
+      .map((item: any) => item.name)
+      .join(",");
 
-    return multiSelectString;
+    return multiSelectString || undefined; // Return undefined for empty strings
   }
 
 

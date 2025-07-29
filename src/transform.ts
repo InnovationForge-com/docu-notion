@@ -8,6 +8,10 @@ import { NotionPage } from "./NotionPage";
 import { IDocuNotionConfig } from "./config/configuration";
 import { NotionBlock } from "./types";
 import { executeWithRateLimitAndRetries } from "./pull";
+import {
+  optimizeListProcessing,
+  addListOptimizerTransformer,
+} from "./plugins/ListOptimizer";
 
 export async function getMarkdownForPage(
   config: IDocuNotionConfig,
@@ -45,6 +49,7 @@ export async function getMarkdownFromNotionBlocks(
 
   // overrides for the default notion-to-markdown conversions
   registerNotionToMarkdownCustomTransforms(config, context);
+  addListOptimizerTransformer(context.notionToMarkdown);
 
   // the main conversion to markdown, using the notion-to-md library
   let markdown = await doNotionToMarkdown(context, blocks); // ?
@@ -157,18 +162,19 @@ async function doNotionToMarkdown(
   docunotionContext: IDocuNotionContext,
   blocks: Array<NotionBlock>
 ) {
+  // Apply list optimization to improve performance for list-heavy pages
+  const optimizedBlocks = optimizeListProcessing(blocks);
+  
   let mdBlocks: any;
   await executeWithRateLimitAndRetries(
     "notionToMarkdown.blocksToMarkdown",
     async () => {
       mdBlocks = await docunotionContext.notionToMarkdown.blocksToMarkdown(
-        // We need to provide a copy of blocks.
-        // Calling blocksToMarkdown can modify the values in the blocks. If it does, and then
-        // we have to retry, we end up retrying with the modified values, which
-        // causes various issues (like using the transformed image url instead of the original one).
-        // Note, currently, we don't do anything else with blocks after this.
-        // If that changes, we'll need to figure out a more sophisticated approach.
-        JSON.parse(JSON.stringify(blocks))
+        // Optimize: Use structuredClone if available (Node 17+), fallback to JSON for older versions
+        // structuredClone is significantly faster than JSON.parse(JSON.stringify())
+        typeof structuredClone !== 'undefined' 
+          ? structuredClone(optimizedBlocks)
+          : JSON.parse(JSON.stringify(optimizedBlocks))
       );
     }
   );
